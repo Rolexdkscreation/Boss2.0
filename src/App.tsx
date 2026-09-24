@@ -107,15 +107,131 @@ function FirstTimeSetup({ onComplete }: { onComplete: (userName: string, assista
 }
 
 /* ═══════════════════════════════════════════
+   VOICE MODE SCREEN (GPT-4 Style)
+   ═══════════════════════════════════════════ */
+function VoiceModeScreen({ state, isListening, isSpeaking, interimText, lastResponse, onExit, activeMode }: {
+  state: AppState;
+  isListening: boolean;
+  isSpeaking: boolean;
+  interimText: string;
+  lastResponse: string;
+  onExit: () => void;
+  activeMode: ModeId;
+}) {
+  const mode = MODES.find(m => m.id === activeMode) || MODES[0];
+  
+  return (
+    <div className="fixed inset-0 bg-gradient-to-br from-gray-950 via-gray-900 to-indigo-950 flex flex-col items-center justify-between z-50 overflow-hidden">
+      {/* Background effects */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px] transition-all duration-1000 ${
+          isListening ? 'bg-green-500/10' : isSpeaking ? 'bg-blue-500/15' : 'bg-indigo-500/5'
+        }`} />
+      </div>
+
+      {/* Top bar */}
+      <div className="relative z-10 w-full flex items-center justify-between px-5 pt-6">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">{mode.icon}</span>
+          <div>
+            <h2 className="text-white font-bold text-sm">{mode.name} Mode</h2>
+            <p className="text-gray-500 text-[11px]">🎤 Voice Conversation</p>
+          </div>
+        </div>
+        <button
+          onClick={onExit}
+          className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all active:scale-95"
+        >
+          <i className="fas fa-times text-white"></i>
+        </button>
+      </div>
+
+      {/* Center orb */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center">
+        <div className="relative">
+          {/* Outer rings */}
+          <div className={`absolute inset-0 -m-16 rounded-full transition-all duration-700 ${
+            isListening ? 'bg-green-500/10 animate-ping-slow' : isSpeaking ? 'bg-blue-500/10 animate-pulse' : 'bg-indigo-500/5 animate-pulse-slow'
+          }`} />
+          <div className={`absolute inset-0 -m-8 rounded-full transition-all duration-500 ${
+            isListening ? 'bg-green-500/15' : isSpeaking ? 'bg-blue-500/20 animate-pulse' : 'bg-indigo-500/10'
+          }`} />
+          
+          {/* Main orb */}
+          <div className={`w-40 h-40 sm:w-48 sm:h-48 rounded-full flex items-center justify-center shadow-2xl transition-all duration-500 relative overflow-hidden ${
+            isListening 
+              ? 'bg-gradient-to-br from-green-400 via-emerald-500 to-green-600 shadow-green-500/40 scale-105' 
+              : isSpeaking 
+                ? 'bg-gradient-to-br from-blue-400 via-indigo-500 to-blue-600 shadow-blue-500/40 scale-100'
+                : 'bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-700 shadow-indigo-500/30'
+          }`}>
+            {/* Glass effect */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/15 via-transparent to-transparent" />
+            <div className="absolute top-4 left-1/4 w-16 h-8 bg-white/10 rounded-full blur-xl" />
+            
+            {/* Content */}
+            <div className="relative z-10 flex flex-col items-center">
+              {isListening ? (
+                <>
+                  <i className="fas fa-microphone text-4xl text-white mb-2"></i>
+                  <div className="flex items-center gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="w-1 bg-white/80 rounded-full animate-soundwave" style={{ animationDelay: `${i * 0.12}s` }} />
+                    ))}
+                  </div>
+                </>
+              ) : isSpeaking ? (
+                <>
+                  <i className="fas fa-volume-up text-4xl text-white mb-2 animate-pulse"></i>
+                  <div className="flex items-center gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="w-1 bg-white/80 rounded-full animate-soundwave" style={{ animationDelay: `${i * 0.1}s` }} />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <span className="text-5xl font-black text-white" style={{ textShadow: '0 0 30px rgba(99,102,241,0.5)' }}>DK</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Status text */}
+        <div className="mt-8 text-center">
+          <p className={`text-lg font-semibold transition-all ${
+            isListening ? 'text-green-400' : isSpeaking ? 'text-blue-400' : 'text-gray-400'
+          }`}>
+            {isListening ? 'सुन रहा हूँ...' : isSpeaking ? 'बोल रहा हूँ...' : 'बोलिए...'}
+          </p>
+          {interimText && (
+            <p className="text-gray-400 text-sm mt-2 max-w-xs italic">"{interimText}"</p>
+          )}
+          {lastResponse && !isListening && !isSpeaking && (
+            <p className="text-gray-500 text-xs mt-4 max-w-sm px-4 line-clamp-3">{lastResponse}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom hint */}
+      <div className="relative z-10 pb-8 text-center">
+        <p className="text-gray-600 text-xs">
+          {isGeminiAvailable(state.geminiApiKey) ? '🤖 Gemini AI Active' : '📝 Basic Mode'} • Natural conversation
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
    ORB SCREEN (HOME)
    ═══════════════════════════════════════════ */
-function OrbScreen({ state, onOpenChat, onOpenSettings, isListening, isSpeaking, onStartListen }: {
+function OrbScreen({ state, onOpenChat, onOpenVoice, onOpenSettings, isListening, isSpeaking }: {
   state: AppState;
   onOpenChat: () => void;
+  onOpenVoice: () => void;
   onOpenSettings: () => void;
   isListening: boolean;
   isSpeaking: boolean;
-  onStartListen: () => void;
 }) {
   const getGreeting = () => {
     const h = new Date().getHours();
@@ -174,19 +290,17 @@ function OrbScreen({ state, onOpenChat, onOpenSettings, isListening, isSpeaking,
 
       {/* Orb Center */}
       <div className="flex-1 flex flex-col items-center justify-center relative z-10">
-        <div className="relative cursor-pointer group" onClick={onOpenChat}>
+        <div className="relative cursor-pointer group" onClick={onOpenVoice}>
           {/* Outer rings */}
           <div className={`absolute inset-0 -m-12 rounded-full transition-all duration-700 ${isListening ? 'bg-green-500/10 animate-ping-slow' : 'bg-indigo-500/5 animate-pulse-slow'}`} />
           <div className={`absolute inset-0 -m-6 rounded-full transition-all duration-500 ${isSpeaking ? 'bg-blue-500/15 animate-pulse' : 'bg-indigo-500/8'}`} />
           
           {/* Main orb */}
           <div className="w-44 h-44 sm:w-52 sm:h-52 md:w-60 md:h-60 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-700 flex items-center justify-center shadow-2xl shadow-indigo-500/30 group-hover:shadow-indigo-500/50 transition-all duration-500 relative overflow-hidden group-active:scale-95">
-            {/* Glass effect */}
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/15 via-transparent to-transparent" />
             <div className="absolute top-4 left-1/4 w-20 h-10 bg-white/10 rounded-full blur-xl" />
             <div className="absolute bottom-6 right-6 w-12 h-12 bg-purple-400/10 rounded-full blur-lg" />
             
-            {/* DK Text */}
             <div className="relative z-10 flex flex-col items-center">
               <span className="text-5xl sm:text-6xl md:text-7xl font-black text-white tracking-tight" style={{ textShadow: '0 0 30px rgba(99,102,241,0.5)' }}>DK</span>
               <span className="text-[10px] text-white/50 font-medium tracking-widest mt-1">AI ASSISTANT</span>
@@ -198,7 +312,7 @@ function OrbScreen({ state, onOpenChat, onOpenSettings, isListening, isSpeaking,
         <div className="mt-8 flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-2">
           <div className={`w-2 h-2 rounded-full transition-colors ${isListening ? 'bg-green-400 animate-pulse' : isSpeaking ? 'bg-blue-400 animate-pulse' : 'bg-gray-600'}`} />
           <span className="text-xs text-gray-400 font-medium tracking-wide">
-            {isListening ? 'LISTENING...' : isSpeaking ? 'SPEAKING...' : 'TAP ORB TO TALK'}
+            {isListening ? 'LISTENING...' : isSpeaking ? 'SPEAKING...' : 'TAP ORB FOR VOICE'}
           </span>
           {isListening && (
             <div className="flex items-center gap-[2px] ml-1">
@@ -249,7 +363,7 @@ function OrbScreen({ state, onOpenChat, onOpenSettings, isListening, isSpeaking,
             Chat
           </button>
           <button
-            onClick={() => { onOpenChat(); onStartListen(); }}
+            onClick={onOpenVoice}
             className="flex-1 py-3.5 bg-indigo-500/15 border border-indigo-500/25 rounded-2xl text-indigo-300 font-medium text-sm hover:bg-indigo-500/25 transition-all active:scale-[0.97] flex items-center justify-center gap-2"
           >
             <i className="fas fa-microphone text-indigo-400"></i>
@@ -309,7 +423,7 @@ function ChatView({ state, messages, onSend, onBack, isListening, isSpeaking, on
     }
   };
 
-  // Dictation (Part 15)
+  // Dictation
   const startDictation = () => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) return;
@@ -324,7 +438,6 @@ function ChatView({ state, messages, onSend, onBack, isListening, isSpeaking, on
         text += event.results[i][0].transcript;
       }
       setInput(text);
-      // Reset auto-send timer
       if (dictationTimeoutRef.current) clearTimeout(dictationTimeoutRef.current);
       dictationTimeoutRef.current = setTimeout(() => {
         if (text.trim()) {
@@ -357,7 +470,6 @@ function ChatView({ state, messages, onSend, onBack, isListening, isSpeaking, on
     if (dictationTimeoutRef.current) clearTimeout(dictationTimeoutRef.current);
   };
 
-  // Quick action suggestions
   const quickActions = getQuickActions(activeMode);
 
   return (
@@ -437,7 +549,6 @@ function ChatView({ state, messages, onSend, onBack, isListening, isSpeaking, on
               {mode.id === 'prompt' && 'Image upload → prompt generate'}
               {mode.id === 'normal' && 'कुछ भी पूछिए या बोलिए!'}
             </p>
-            {/* Quick action buttons */}
             <div className="flex flex-wrap gap-2 justify-center">
               {quickActions.map((action, i) => (
                 <button
@@ -498,7 +609,6 @@ function ChatView({ state, messages, onSend, onBack, isListening, isSpeaking, on
           <button
             onClick={() => fileInputRef.current?.click()}
             className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all flex-shrink-0 active:scale-95"
-            title="Upload image for understanding"
           >
             <i className="fas fa-image text-gray-500 text-sm"></i>
           </button>
@@ -526,7 +636,6 @@ function ChatView({ state, messages, onSend, onBack, isListening, isSpeaking, on
             <button
               onClick={isDictating ? stopDictation : startDictation}
               className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-95 ${isDictating ? 'bg-red-500/20 border border-red-500/30' : 'bg-white/5 border border-white/10 hover:bg-white/10'}`}
-              title="Voice dictation"
             >
               <i className={`fas fa-microphone text-sm ${isDictating ? 'text-red-400 animate-pulse' : 'text-gray-500'}`}></i>
             </button>
@@ -551,12 +660,9 @@ function getQuickActions(mode: ModeId): string[] {
 }
 
 function formatMessage(text: string): React.ReactNode {
-  // Simple markdown-like formatting
   const lines = text.split('\n');
   return lines.map((line, i) => {
-    // Bold
     let formatted = line.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>');
-    // Bullet points
     if (formatted.startsWith('• ') || formatted.startsWith('- ')) {
       formatted = `<span class="text-indigo-300">•</span> ${formatted.substring(2)}`;
     }
@@ -646,7 +752,7 @@ function SettingsView({ state, onBack, onUpdate, onToast }: {
             </ul>
           </InfoCard>
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4">
-            <p className="text-amber-300 text-sm">⚠️ DK honestly answers privacy questions based on this actual setup — never oversells protection beyond what's implemented.</p>
+            <p className="text-amber-300 text-sm">⚠️ DK honestly answers privacy questions based on this actual setup.</p>
           </div>
         </div>
       </SettingsPage>
@@ -684,9 +790,6 @@ function SettingsView({ state, onBack, onUpdate, onToast }: {
           >
             + Add Contact
           </button>
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 mt-4">
-            <p className="text-blue-300 text-xs">💡 Deep links supported: tel:, sms:, wa.me, mailto:, YouTube, Maps</p>
-          </div>
         </div>
       </SettingsPage>
     );
@@ -711,45 +814,7 @@ function SettingsView({ state, onBack, onUpdate, onToast }: {
               </div>
             </div>
           ))}
-          <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
-            <div className="flex items-center justify-between bg-white/5 rounded-xl p-3 border border-white/5">
-              <div className="flex items-center gap-3"><span className="text-xl">🛡️</span><p className="text-white text-sm font-medium">Screen Guard</p></div>
-              <div className={`px-3 py-1 rounded-full text-[11px] font-semibold ${state.screenGuard.enabled ? 'bg-green-500/15 text-green-400 border border-green-500/20' : 'bg-gray-500/15 text-gray-500 border border-gray-500/20'}`}>
-                {state.screenGuard.enabled ? 'ON' : 'OFF'}
-              </div>
-            </div>
-            <div className="flex items-center justify-between bg-white/5 rounded-xl p-3 border border-white/5">
-              <div className="flex items-center gap-3"><span className="text-xl">🔲</span><p className="text-white text-sm font-medium">Pocket Mode</p></div>
-              <div className={`px-3 py-1 rounded-full text-[11px] font-semibold ${state.pocketMode ? 'bg-green-500/15 text-green-400 border border-green-500/20' : 'bg-gray-500/15 text-gray-500 border border-gray-500/20'}`}>
-                {state.pocketMode ? 'ON' : 'OFF'}
-              </div>
-            </div>
-          </div>
         </div>
-      </SettingsPage>
-    );
-  }
-
-  if (section === 'screenGuardPhotos') {
-    return (
-      <SettingsPage title="Guard Photos" onBack={() => setSection(null)}>
-        {state.screenGuard.capturedPhotos.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-3">📷</div>
-            <p className="text-gray-500 text-sm">No captured photos yet</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {state.screenGuard.capturedPhotos.map((p, i) => (
-              <div key={i} className="relative rounded-xl overflow-hidden border border-white/10">
-                <img src={p.data} alt="captured" className="w-full h-32 object-cover" />
-                <p className="absolute bottom-0 left-0 right-0 bg-black/70 text-[10px] text-gray-300 px-2 py-1">
-                  {new Date(p.timestamp).toLocaleString('hi-IN')}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
       </SettingsPage>
     );
   }
@@ -779,42 +844,6 @@ function SettingsView({ state, onBack, onUpdate, onToast }: {
           </div>
         </div>
 
-        {/* Boss Verification */}
-        <div className="bg-amber-500/5 rounded-2xl p-4 border border-amber-500/15">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="text-amber-400">🔒</span>
-              <h3 className="text-amber-300 font-semibold text-sm">Boss Verification</h3>
-            </div>
-            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${state.bossVerified ? 'bg-green-500/15 text-green-400 border border-green-500/20' : 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
-              {state.bossVerified ? '✅ VERIFIED' : 'NOT VERIFIED'}
-            </span>
-          </div>
-          <p className="text-gray-500 text-xs mb-2">Identity-recognition only. No edit/reset UI.</p>
-          {!state.bossVerified && (
-            <button onClick={() => { setShowBossVerification(true); setBossStep(0); setBossAnswer(''); }} className="text-amber-400 text-xs font-medium hover:text-amber-300">
-              Verify Now →
-            </button>
-          )}
-          {showBossVerification && (
-            <div className="mt-3 space-y-2 animate-fade-in">
-              <p className="text-gray-300 text-xs">{BOSS_VERIFICATION[bossStep].q}</p>
-              <input
-                type="text"
-                value={bossAnswer}
-                onChange={(e) => setBossAnswer(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleBossVerify()}
-                placeholder="Answer..."
-                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:border-amber-400/50"
-                autoFocus
-              />
-              <button onClick={handleBossVerify} className="w-full py-2 bg-amber-500/20 border border-amber-500/30 rounded-xl text-amber-300 text-sm font-medium">
-                Submit ({bossStep + 1}/{BOSS_VERIFICATION.length})
-              </button>
-            </div>
-          )}
-        </div>
-
         {/* Gemini API Key */}
         <div className="bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-2xl p-4 border border-indigo-500/15">
           <div className="flex items-center gap-2 mb-2">
@@ -839,13 +868,42 @@ function SettingsView({ state, onBack, onUpdate, onToast }: {
             />
           </div>
           <p className="text-gray-600 text-[10px] mt-2">
-            🔑 Free API key: <span className="text-indigo-400">aistudio.google.com/apikey</span> पर जाकर बनाओ
+            🔑 Free API key: <span className="text-indigo-400">aistudio.google.com/apikey</span>
           </p>
-          {!isGeminiAvailable(state.geminiApiKey) && (
-            <div className="mt-2 bg-amber-500/10 border border-amber-500/15 rounded-lg p-2">
-              <p className="text-amber-300/80 text-[10px]">
-                ⚡ API key नहीं है तो basic responses मिलेंगे। Real AI conversations के लिए key डालो!
-              </p>
+        </div>
+
+        {/* Boss Verification */}
+        <div className="bg-amber-500/5 rounded-2xl p-4 border border-amber-500/15">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-amber-400">🔒</span>
+              <h3 className="text-amber-300 font-semibold text-sm">Boss Verification</h3>
+            </div>
+            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${state.bossVerified ? 'bg-green-500/15 text-green-400 border border-green-500/20' : 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
+              {state.bossVerified ? '✅ VERIFIED' : 'NOT VERIFIED'}
+            </span>
+          </div>
+          <p className="text-gray-500 text-xs mb-2">Identity-recognition only.</p>
+          {!state.bossVerified && (
+            <button onClick={() => { setShowBossVerification(true); setBossStep(0); setBossAnswer(''); }} className="text-amber-400 text-xs font-medium hover:text-amber-300">
+              Verify Now →
+            </button>
+          )}
+          {showBossVerification && (
+            <div className="mt-3 space-y-2 animate-fade-in">
+              <p className="text-gray-300 text-xs">{BOSS_VERIFICATION[bossStep].q}</p>
+              <input
+                type="text"
+                value={bossAnswer}
+                onChange={(e) => setBossAnswer(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleBossVerify()}
+                placeholder="Answer..."
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:border-amber-400/50"
+                autoFocus
+              />
+              <button onClick={handleBossVerify} className="w-full py-2 bg-amber-500/20 border border-amber-500/30 rounded-xl text-amber-300 text-sm font-medium">
+                Submit ({bossStep + 1}/{BOSS_VERIFICATION.length})
+              </button>
             </div>
           )}
         </div>
@@ -853,7 +911,6 @@ function SettingsView({ state, onBack, onUpdate, onToast }: {
         {/* Personality Modes */}
         <div className="bg-white/[0.03] rounded-2xl p-4 border border-white/5">
           <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">🎭 Personality Modes</h3>
-          <p className="text-gray-600 text-[11px] mb-3">Toggle ON/OFF — also controllable by voice command</p>
           <div className="space-y-1">
             {MODES.filter(m => m.id !== 'normal').map(m => (
               <div key={m.id} className="flex items-center justify-between py-2.5 px-1">
@@ -896,13 +953,8 @@ function SettingsView({ state, onBack, onUpdate, onToast }: {
               <div className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all shadow-sm ${state.screenGuard.enabled ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
             </button>
           </div>
-          <p className="text-gray-600 text-[11px]">Detects unauthorized touch/motion. Siren + photo capture.</p>
-          {state.screenGuard.enabled && (
-            <div className="mt-2 flex gap-2">
-              <span className="text-green-400 text-xs">✅ Active</span>
-              <button onClick={() => setSection('screenGuardPhotos')} className="text-indigo-400 text-xs hover:text-indigo-300">View Photos →</button>
-            </div>
-          )}
+          <p className="text-gray-600 text-[11px]">Detects unauthorized touch/motion.</p>
+          {state.screenGuard.enabled && <span className="text-green-400 text-xs">✅ Active</span>}
           {showPinSetup && !state.screenGuard.enabled && (
             <div className="mt-3 space-y-2 animate-fade-in">
               <input
@@ -941,15 +993,15 @@ function SettingsView({ state, onBack, onUpdate, onToast }: {
               <div className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all shadow-sm ${state.pocketMode ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
             </button>
           </div>
-          <p className="text-gray-600 text-[11px] mt-1">Black screen, touch disabled, voice only. Exit via voice command.</p>
+          <p className="text-gray-600 text-[11px] mt-1">Black screen, touch disabled, voice only.</p>
         </div>
 
-        {/* Navigation items */}
+        {/* Navigation */}
         <div className="space-y-2">
           {[
             { id: 'contacts', icon: '📱', label: 'My Contacts', sub: 'Name → Number mapping' },
             { id: 'controlCenter', icon: '🎛️', label: 'Control Center', sub: 'All modes status' },
-            { id: 'privacy', icon: '🔐', label: 'Privacy & Security', sub: 'Data & permissions info' },
+            { id: 'privacy', icon: '🔐', label: 'Privacy & Security', sub: 'Data & permissions' },
           ].map(item => (
             <button
               key={item.id}
@@ -966,9 +1018,8 @@ function SettingsView({ state, onBack, onUpdate, onToast }: {
           ))}
         </div>
 
-        {/* Version */}
         <div className="text-center py-6">
-          <p className="text-gray-700 text-[11px]">DK AI v1.0 • Built with ❤️ for Boss</p>
+          <p className="text-gray-700 text-[11px]">DK AI v1.0 • Built with ❤️</p>
         </div>
       </div>
     </div>
@@ -1018,29 +1069,50 @@ export default function App() {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [interimText, setInterimText] = useState('');
+  const [lastResponse, setLastResponse] = useState('');
+  const [showVoiceMode, setShowVoiceMode] = useState(false);
   const recognitionRef = useRef<any>(null);
   const shouldListenRef = useRef(false);
   const synthRef = useRef<SpeechSynthesis | null>(null);
+  const voicesLoadedRef = useRef(false);
 
   // Persist state
   useEffect(() => { saveState(state); }, [state]);
 
-  // Init speech synthesis
+  // Init speech synthesis & load voices
   useEffect(() => {
     synthRef.current = window.speechSynthesis;
-    window.speechSynthesis.getVoices();
-    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        voicesLoadedRef.current = true;
+        console.log('Voices loaded:', voices.length);
+      }
+    };
+    
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    
+    // Warm up speech synthesis
+    const warmup = new SpeechSynthesisUtterance('');
+    warmup.volume = 0;
+    window.speechSynthesis.speak(warmup);
   }, []);
 
   // Init speech recognition
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return;
+    if (!SR) {
+      console.warn('Speech Recognition not supported');
+      return;
+    }
 
     const recognition = new SR();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'hi-IN';
+    recognition.maxAlternatives = 3;
 
     recognition.onresult = (event: any) => {
       let interim = '', final = '';
@@ -1050,21 +1122,26 @@ export default function App() {
         else interim += t;
       }
       setInterimText(interim);
-      if (final) {
+      if (final && final.trim()) {
         handleVoiceInput(final.trim());
         setInterimText('');
       }
     };
 
     recognition.onerror = (event: any) => {
-      if ((event.error === 'no-speech' || event.error === 'aborted') && shouldListenRef.current) {
-        setTimeout(() => { try { recognition.start(); } catch(e) {} }, 300);
+      console.log('Recognition error:', event.error);
+      if ((event.error === 'no-speech' || event.error === 'aborted' || event.error === 'network') && shouldListenRef.current) {
+        setTimeout(() => { 
+          try { recognition.start(); } catch(e) { console.log('Restart failed'); }
+        }, 500);
       }
     };
 
     recognition.onend = () => {
       if (shouldListenRef.current) {
-        setTimeout(() => { try { recognition.start(); } catch(e) {} }, 300);
+        setTimeout(() => { 
+          try { recognition.start(); } catch(e) {}
+        }, 300);
       } else {
         setIsListening(false);
       }
@@ -1074,7 +1151,7 @@ export default function App() {
     return () => { shouldListenRef.current = false; try { recognition.stop(); } catch(e) {} };
   }, []);
 
-  // Page Visibility (Part 21)
+  // Page Visibility
   useEffect(() => {
     const handler = () => {
       if (document.hidden) return;
@@ -1089,33 +1166,97 @@ export default function App() {
   }, []);
 
   const startListening = useCallback(() => {
-    if (!recognitionRef.current) return;
+    if (!recognitionRef.current) {
+      console.warn('Recognition not initialized');
+      return;
+    }
     shouldListenRef.current = true;
-    try { recognitionRef.current.start(); setIsListening(true); } catch(e) {}
+    try { 
+      recognitionRef.current.start(); 
+      setIsListening(true);
+      console.log('Listening started');
+    } catch(e) {
+      console.log('Already listening or error:', e);
+    }
   }, []);
 
   const stopListening = useCallback(() => {
     shouldListenRef.current = false;
-    if (recognitionRef.current) try { recognitionRef.current.stop(); } catch(e) {}
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch(e) {}
+    }
     setIsListening(false);
   }, []);
 
   const speak = useCallback((text: string, gender: 'male' | 'female' = 'female') => {
-    if (!synthRef.current) return;
+    if (!synthRef.current) {
+      console.warn('Speech synthesis not available');
+      return;
+    }
+    
+    // Cancel any ongoing speech
     synthRef.current.cancel();
-    const u = new SpeechSynthesisUtterance(text.replace(/[*#_~`🔒👑✅❌💕📚💼🤝📖✍️🎨🛡️🔲🚀✨👋🎭📱🎛️🔐•]/g, ''));
-    u.lang = 'hi-IN';
-    u.rate = 0.95;
-    u.pitch = gender === 'female' ? 1.1 : 0.85;
+    
+    // Clean text for speech
+    const cleanText = text
+      .replace(/[*#_~`]/g, '')
+      .replace(/[🔒👑✅❌💕📚💼🤝📖✍️🎨🛡️🔲🚀✨👋🎭📱🎛️🔐•🤖🎤📷🎬🗺️📞💬📧⚡⚠️💡💰📐🔬📝💻📜📈🏥⚖️🏛️]/g, '')
+      .replace(/\n+/g, '. ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    if (!cleanText) return;
+    
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'hi-IN';
+    utterance.rate = 1.0;
+    utterance.pitch = gender === 'female' ? 1.15 : 0.85;
+    utterance.volume = 1.0;
+
+    // Find best voice
     const voices = synthRef.current.getVoices();
-    let v = voices.find(v => v.lang.includes('hi') && (gender === 'female' ? /female|priya|lekha/i.test(v.name) : /male|ravi|hemant/i.test(v.name)));
-    if (!v) v = voices.find(v => v.lang.includes('hi'));
-    if (!v) v = voices.find(v => v.lang.includes('en'));
-    if (v) u.voice = v;
-    u.onstart = () => setIsSpeaking(true);
-    u.onend = () => setIsSpeaking(false);
-    u.onerror = () => setIsSpeaking(false);
-    synthRef.current.speak(u);
+    let selectedVoice = voices.find(v => {
+      const isHindi = v.lang.includes('hi') || v.lang.includes('IN');
+      const name = v.name.toLowerCase();
+      if (gender === 'female') {
+        return isHindi && (name.includes('female') || name.includes('priya') || name.includes('lekha') || name.includes('swara'));
+      } else {
+        return isHindi && (name.includes('male') || name.includes('ravi') || name.includes('hemant'));
+      }
+    });
+    
+    if (!selectedVoice) {
+      selectedVoice = voices.find(v => v.lang.includes('hi'));
+    }
+    if (!selectedVoice) {
+      selectedVoice = voices.find(v => v.lang.includes('en-IN'));
+    }
+    if (!selectedVoice && voices.length > 0) {
+      selectedVoice = voices[0];
+    }
+    
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      console.log('Using voice:', selectedVoice.name);
+    }
+
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      console.log('Speaking started');
+    };
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      console.log('Speaking ended');
+    };
+    utterance.onerror = (e) => {
+      setIsSpeaking(false);
+      console.error('Speech error:', e);
+    };
+
+    // Small delay to ensure synthesis is ready
+    setTimeout(() => {
+      synthRef.current?.speak(utterance);
+    }, 100);
   }, []);
 
   const getActiveChatMode = useCallback((modes: Record<ModeId, boolean>): ModeId => {
@@ -1131,6 +1272,7 @@ export default function App() {
 
   const handleVoiceInput = useCallback(async (text: string) => {
     const lower = text.toLowerCase();
+    console.log('Voice input:', text);
 
     // Pocket mode exit
     if (state.pocketMode && (/pocket.*off|pocket mode off/.test(lower))) {
@@ -1141,40 +1283,44 @@ export default function App() {
     }
 
     // Mode switch commands
-    const cmds: { re: RegExp; mode: ModeId | string; on: boolean }[] = [
-      { re: /professional.*on|प्रोफेशनल.*ऑन/, mode: 'professional', on: true },
-      { re: /professional.*off/, mode: 'professional', on: false },
-      { re: /girlfriend.*on/, mode: 'girlfriend', on: true },
-      { re: /girlfriend.*off/, mode: 'girlfriend', on: false },
-      { re: /teacher.*on|शिक्षक.*ऑन|टीचर.*ऑन/, mode: 'teacher', on: true },
-      { re: /teacher.*off|टीचर.*ऑफ/, mode: 'teacher', on: false },
-      { re: /dosti.*on|दोस्ती.*ऑन/, mode: 'dosti', on: true },
-      { re: /dosti.*off|दोस्ती.*ऑफ/, mode: 'dosti', on: false },
-      { re: /story.*on|कहानी.*ऑन/, mode: 'story', on: true },
-      { re: /story.*off|कहानी.*ऑफ/, mode: 'story', on: false },
-      { re: /content.*on|कंटेंट.*ऑन/, mode: 'contentWriting', on: true },
-      { re: /content.*off|कंटेंट.*ऑफ/, mode: 'contentWriting', on: false },
-      { re: /prompt.*on|प्रॉम्प्ट.*ऑन/, mode: 'prompt', on: true },
-      { re: /prompt.*off|प्रॉम्प्ट.*ऑफ/, mode: 'prompt', on: false },
-      { re: /pocket.*on|पॉकेट.*ऑन/, mode: 'pocket', on: true },
-      { re: /pocket.*off|पॉकेट.*ऑफ/, mode: 'pocket', on: false },
+    const cmds: { re: RegExp; modeId: ModeId | string; on: boolean }[] = [
+      { re: /professional.*on|प्रोफेशनल.*ऑन/, modeId: 'professional', on: true },
+      { re: /professional.*off|प्रोफेशनल.*ऑफ/, modeId: 'professional', on: false },
+      { re: /girlfriend.*on/, modeId: 'girlfriend', on: true },
+      { re: /girlfriend.*off/, modeId: 'girlfriend', on: false },
+      { re: /teacher.*on|शिक्षक.*ऑन|टीचर.*ऑन/, modeId: 'teacher', on: true },
+      { re: /teacher.*off|टीचर.*ऑफ/, modeId: 'teacher', on: false },
+      { re: /dosti.*on|दोस्ती.*ऑन/, modeId: 'dosti', on: true },
+      { re: /dosti.*off|दोस्ती.*ऑफ/, modeId: 'dosti', on: false },
+      { re: /story.*on|कहानी.*ऑन/, modeId: 'story', on: true },
+      { re: /story.*off|कहानी.*ऑफ/, modeId: 'story', on: false },
+      { re: /content.*on|कंटेंट.*ऑन/, modeId: 'contentWriting', on: true },
+      { re: /content.*off|कंटेंट.*ऑफ/, modeId: 'contentWriting', on: false },
+      { re: /prompt.*on|प्रॉम्प्ट.*ऑन/, modeId: 'prompt', on: true },
+      { re: /prompt.*off|प्रॉम्प्ट.*ऑफ/, modeId: 'prompt', on: false },
+      { re: /pocket.*on|पॉकेट.*ऑन/, modeId: 'pocket', on: true },
+      { re: /pocket.*off|पॉकेट.*ऑफ/, modeId: 'pocket', on: false },
+      { re: /screen guard.*on/, modeId: 'screenGuard', on: true },
+      { re: /screen guard.*off/, modeId: 'screenGuard', on: false },
     ];
 
     for (const cmd of cmds) {
       if (cmd.re.test(lower)) {
-        if (cmd.mode === 'pocket') {
+        if (cmd.modeId === 'pocket') {
           setState(prev => ({ ...prev, pocketMode: cmd.on }));
           showToast(`🔲 Pocket Mode ${cmd.on ? 'ON' : 'OFF'}`);
           speak(`Pocket Mode ${cmd.on ? 'chalu' : 'band'}`);
+        } else if (cmd.modeId === 'screenGuard') {
+          showToast(`🛡️ Screen Guard ${cmd.on ? 'ON' : 'OFF'}`);
         } else {
-          const modeObj = MODES.find(m => m.id === cmd.mode);
+          const modeObj = MODES.find(m => m.id === cmd.modeId);
           if (modeObj) {
             setState(prev => {
               const newModes = { ...prev.activeModes };
               if (cmd.on && modeObj.mutuallyExclusive) {
                 for (const excl of modeObj.mutuallyExclusive) newModes[excl] = false;
               }
-              newModes[cmd.mode as ModeId] = cmd.on;
+              newModes[cmd.modeId as ModeId] = cmd.on;
               return { ...prev, activeModes: newModes };
             });
             showToast(`${modeObj.icon} ${modeObj.name} Mode ${cmd.on ? 'ON' : 'OFF'}`);
@@ -1185,22 +1331,26 @@ export default function App() {
       }
     }
 
-    // Regular message
+    // Regular conversation
     const currentMode = getActiveChatMode(state.activeModes);
-    if (state.currentScreen === 'orb') {
-      setState(prev => ({ ...prev, currentScreen: 'chat', activeChatMode: currentMode }));
+    
+    // Switch to voice mode screen if not already there
+    if (!showVoiceMode) {
+      setShowVoiceMode(true);
     }
-
+    
+    // Add user message
     const userMsg: Message = { id: generateId(), role: 'user', content: text, timestamp: Date.now(), mode: currentMode };
     setState(prev => addMessage(prev, currentMode, userMsg));
 
     // Thinking filler
     setTimeout(() => speak(getThinkingFiller(), MODES.find(m => m.id === currentMode)?.voiceGender || 'female'), 200);
 
-    // Generate response - use Gemini if available
+    // Generate response
+    let response = '';
     if (isGeminiAvailable(state.geminiApiKey)) {
       try {
-        const response = await callGeminiAPI(
+        response = await callGeminiAPI(
           state.geminiApiKey,
           text,
           currentMode,
@@ -1208,40 +1358,45 @@ export default function App() {
           state.assistantName,
           (state.conversations[currentMode] || []).map(m => ({ role: m.role, content: m.content }))
         );
-        const assistantMsg: Message = { id: generateId(), role: 'assistant', content: response, timestamp: Date.now(), mode: currentMode };
-        setState(prev => addMessage(prev, currentMode, assistantMsg));
-        speak(response.replace(/[*#_~`]/g, '').substring(0, 300), MODES.find(m => m.id === currentMode)?.voiceGender || 'female');
-        return;
       } catch (e) {
-        console.error('Gemini API error:', e);
-        // Fallback to local
+        console.error('Gemini error:', e);
+        response = generateResponse(text, {
+          mode: currentMode,
+          userName: state.userName,
+          assistantName: state.assistantName,
+          activeModes: state.activeModes,
+          conversationHistory: (state.conversations[currentMode] || []).map(m => ({ role: m.role, content: m.content })),
+        });
       }
-    }
-
-    // Fallback to local response
-    setTimeout(() => {
-      const response = generateResponse(text, {
+    } else {
+      response = generateResponse(text, {
         mode: currentMode,
         userName: state.userName,
         assistantName: state.assistantName,
         activeModes: state.activeModes,
         conversationHistory: (state.conversations[currentMode] || []).map(m => ({ role: m.role, content: m.content })),
       });
-      const assistantMsg: Message = { id: generateId(), role: 'assistant', content: response, timestamp: Date.now(), mode: currentMode };
-      setState(prev => addMessage(prev, currentMode, assistantMsg));
-      speak(response.replace(/[*#_~`]/g, '').substring(0, 300), MODES.find(m => m.id === currentMode)?.voiceGender || 'female');
-    }, 1200);
-  }, [state, speak, getActiveChatMode, showToast]);
+    }
+
+    const assistantMsg: Message = { id: generateId(), role: 'assistant', content: response, timestamp: Date.now(), mode: currentMode };
+    setState(prev => addMessage(prev, currentMode, assistantMsg));
+    setLastResponse(response);
+    
+    // Speak response
+    setTimeout(() => {
+      speak(response.substring(0, 400), MODES.find(m => m.id === currentMode)?.voiceGender || 'female');
+    }, 300);
+  }, [state, speak, getActiveChatMode, showToast, showVoiceMode]);
 
   const handleSend = useCallback(async (text: string, image?: string) => {
     const currentMode = getActiveChatMode(state.activeModes);
     const userMsg: Message = { id: generateId(), role: 'user', content: text, timestamp: Date.now(), mode: currentMode, image };
     setState(prev => addMessage(prev, currentMode, userMsg));
 
-    // Use Gemini API if available
+    let response = '';
     if (isGeminiAvailable(state.geminiApiKey)) {
       try {
-        const response = await callGeminiAPI(
+        response = await callGeminiAPI(
           state.geminiApiKey,
           text,
           currentMode,
@@ -1250,27 +1405,23 @@ export default function App() {
           (state.conversations[currentMode] || []).map(m => ({ role: m.role, content: m.content })),
           image
         );
-        const assistantMsg: Message = { id: generateId(), role: 'assistant', content: response, timestamp: Date.now(), mode: currentMode };
-        setState(prev => addMessage(prev, currentMode, assistantMsg));
-        return;
       } catch (e) {
-        console.error('Gemini API error:', e);
-        // Fallback to local response
+        console.error('Gemini error:', e);
       }
     }
 
-    // Fallback to local response
-    setTimeout(() => {
-      const response = generateResponse(text, {
+    if (!response) {
+      response = generateResponse(text, {
         mode: currentMode,
         userName: state.userName,
         assistantName: state.assistantName,
         activeModes: state.activeModes,
         conversationHistory: (state.conversations[currentMode] || []).map(m => ({ role: m.role, content: m.content })),
       });
-      const assistantMsg: Message = { id: generateId(), role: 'assistant', content: response, timestamp: Date.now(), mode: currentMode };
-      setState(prev => addMessage(prev, currentMode, assistantMsg));
-    }, 600);
+    }
+
+    const assistantMsg: Message = { id: generateId(), role: 'assistant', content: response, timestamp: Date.now(), mode: currentMode };
+    setState(prev => addMessage(prev, currentMode, assistantMsg));
   }, [state, getActiveChatMode]);
 
   const handleSetupComplete = (userName: string, assistantName: string) => {
@@ -1285,44 +1436,63 @@ export default function App() {
       {toast && <ToastNotification message={toast} onDismiss={() => setToast(null)} />}
       {state.pocketMode && <PocketModeOverlay />}
 
-      <div className="h-full w-full max-w-lg mx-auto relative">
-        {state.currentScreen === 'orb' && (
-          <OrbScreen
-            state={state}
-            onOpenChat={() => {
-              setState(prev => ({ ...prev, currentScreen: 'chat', activeChatMode: getActiveChatMode(prev.activeModes) }));
-              startListening();
-            }}
-            onOpenSettings={() => setState(prev => ({ ...prev, currentScreen: 'settings' }))}
-            isListening={isListening}
-            isSpeaking={isSpeaking}
-            onStartListen={startListening}
-          />
-        )}
-        {state.currentScreen === 'chat' && (
-          <ChatView
-            state={state}
-            messages={state.conversations[state.activeChatMode] || []}
-            onSend={handleSend}
-            onBack={() => { setState(prev => ({ ...prev, currentScreen: 'orb' })); stopListening(); }}
-            isListening={isListening}
-            isSpeaking={isSpeaking}
-            onStartListen={startListening}
-            onStopListen={stopListening}
-            activeMode={state.activeChatMode}
-            onChangeMode={(mode) => setState(prev => ({ ...prev, activeChatMode: mode }))}
-            interimText={interimText}
-          />
-        )}
-        {state.currentScreen === 'settings' && (
-          <SettingsView
-            state={state}
-            onBack={() => setState(prev => ({ ...prev, currentScreen: 'orb' }))}
-            onUpdate={(updates) => setState(prev => ({ ...prev, ...updates }))}
-            onToast={showToast}
-          />
-        )}
-      </div>
+      {/* Voice Mode Screen */}
+      {showVoiceMode && (
+        <VoiceModeScreen
+          state={state}
+          isListening={isListening}
+          isSpeaking={isSpeaking}
+          interimText={interimText}
+          lastResponse={lastResponse}
+          onExit={() => {
+            setShowVoiceMode(false);
+            stopListening();
+          }}
+          activeMode={getActiveChatMode(state.activeModes)}
+        />
+      )}
+
+      {/* Main app (hidden when voice mode is active) */}
+      {!showVoiceMode && (
+        <div className="h-full w-full max-w-lg mx-auto relative">
+          {state.currentScreen === 'orb' && (
+            <OrbScreen
+              state={state}
+              onOpenChat={() => setState(prev => ({ ...prev, currentScreen: 'chat', activeChatMode: getActiveChatMode(prev.activeModes) }))}
+              onOpenVoice={() => {
+                setShowVoiceMode(true);
+                startListening();
+              }}
+              onOpenSettings={() => setState(prev => ({ ...prev, currentScreen: 'settings' }))}
+              isListening={isListening}
+              isSpeaking={isSpeaking}
+            />
+          )}
+          {state.currentScreen === 'chat' && (
+            <ChatView
+              state={state}
+              messages={state.conversations[state.activeChatMode] || []}
+              onSend={handleSend}
+              onBack={() => setState(prev => ({ ...prev, currentScreen: 'orb' }))}
+              isListening={isListening}
+              isSpeaking={isSpeaking}
+              onStartListen={startListening}
+              onStopListen={stopListening}
+              activeMode={state.activeChatMode}
+              onChangeMode={(mode) => setState(prev => ({ ...prev, activeChatMode: mode }))}
+              interimText={interimText}
+            />
+          )}
+          {state.currentScreen === 'settings' && (
+            <SettingsView
+              state={state}
+              onBack={() => setState(prev => ({ ...prev, currentScreen: 'orb' }))}
+              onUpdate={(updates) => setState(prev => ({ ...prev, ...updates }))}
+              onToast={showToast}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
