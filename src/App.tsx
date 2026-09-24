@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, ModeId, Message, MODES, BOSS_VERIFICATION } from './types';
 import { loadState, saveState, addMessage, getInitials, generateId } from './store';
 import { generateResponse, getThinkingFiller } from './ai';
+import { callGeminiAPI, isGeminiAvailable } from './gemini';
 
 /* ═══════════════════════════════════════════
    TOAST NOTIFICATION
@@ -227,6 +228,16 @@ function OrbScreen({ state, onOpenChat, onOpenSettings, isListening, isSpeaking,
         </div>
       )}
 
+      {/* Gemini status */}
+      {state.geminiApiKey && (
+        <div className="relative z-10 px-5 pb-1">
+          <div className="flex items-center justify-center gap-1.5 text-[10px] text-indigo-300/70">
+            <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+            <span>🤖 Gemini AI Active</span>
+          </div>
+        </div>
+      )}
+
       {/* Bottom actions */}
       <div className="relative z-10 px-5 pb-8 pt-2">
         <div className="flex gap-3 max-w-sm mx-auto">
@@ -361,8 +372,14 @@ function ChatView({ state, messages, onSend, onBack, isListening, isSpeaking, on
             <span className="text-lg">{mode.icon}</span>
             <h2 className="text-white font-semibold text-sm truncate">{mode.name} Mode</h2>
             {state.activeModes[activeMode] && <div className="w-1.5 h-1.5 rounded-full bg-green-400" />}
+            {isGeminiAvailable(state.geminiApiKey) && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 font-medium">AI</span>
+            )}
           </div>
-          <p className="text-gray-500 text-[11px]">{mode.nameHi} मोड • {mode.voiceGender === 'female' ? '👩' : '👨'} {mode.voiceGender} voice</p>
+          <p className="text-gray-500 text-[11px]">
+            {mode.nameHi} मोड • {mode.voiceGender === 'female' ? '👩' : '👨'} {mode.voiceGender} voice
+            {isGeminiAvailable(state.geminiApiKey) ? ' • 🤖 Gemini' : ' • 📝 Basic'}
+          </p>
         </div>
         <button
           onClick={() => setShowModePicker(!showModePicker)}
@@ -798,6 +815,41 @@ function SettingsView({ state, onBack, onUpdate, onToast }: {
           )}
         </div>
 
+        {/* Gemini API Key */}
+        <div className="bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-2xl p-4 border border-indigo-500/15">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-lg">🤖</span>
+            <h3 className="text-white font-semibold text-sm">Gemini AI API</h3>
+            {isGeminiAvailable(state.geminiApiKey) && (
+              <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/20">
+                ✅ ACTIVE
+              </span>
+            )}
+          </div>
+          <p className="text-gray-500 text-[11px] mb-3">
+            API key डालो — real AI से बात होगी! Voice + Text दोनों में।
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="password"
+              value={state.geminiApiKey}
+              onChange={(e) => onUpdate({ geminiApiKey: e.target.value })}
+              placeholder="Gemini API Key paste करो..."
+              className="flex-1 px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-xs placeholder-gray-600 focus:outline-none focus:border-indigo-400/40"
+            />
+          </div>
+          <p className="text-gray-600 text-[10px] mt-2">
+            🔑 Free API key: <span className="text-indigo-400">aistudio.google.com/apikey</span> पर जाकर बनाओ
+          </p>
+          {!isGeminiAvailable(state.geminiApiKey) && (
+            <div className="mt-2 bg-amber-500/10 border border-amber-500/15 rounded-lg p-2">
+              <p className="text-amber-300/80 text-[10px]">
+                ⚡ API key नहीं है तो basic responses मिलेंगे। Real AI conversations के लिए key डालो!
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Personality Modes */}
         <div className="bg-white/[0.03] rounded-2xl p-4 border border-white/5">
           <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">🎭 Personality Modes</h3>
@@ -1077,7 +1129,7 @@ export default function App() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const handleVoiceInput = useCallback((text: string) => {
+  const handleVoiceInput = useCallback(async (text: string) => {
     const lower = text.toLowerCase();
 
     // Pocket mode exit
@@ -1145,7 +1197,28 @@ export default function App() {
     // Thinking filler
     setTimeout(() => speak(getThinkingFiller(), MODES.find(m => m.id === currentMode)?.voiceGender || 'female'), 200);
 
-    // Generate response
+    // Generate response - use Gemini if available
+    if (isGeminiAvailable(state.geminiApiKey)) {
+      try {
+        const response = await callGeminiAPI(
+          state.geminiApiKey,
+          text,
+          currentMode,
+          state.userName,
+          state.assistantName,
+          (state.conversations[currentMode] || []).map(m => ({ role: m.role, content: m.content }))
+        );
+        const assistantMsg: Message = { id: generateId(), role: 'assistant', content: response, timestamp: Date.now(), mode: currentMode };
+        setState(prev => addMessage(prev, currentMode, assistantMsg));
+        speak(response.replace(/[*#_~`]/g, '').substring(0, 300), MODES.find(m => m.id === currentMode)?.voiceGender || 'female');
+        return;
+      } catch (e) {
+        console.error('Gemini API error:', e);
+        // Fallback to local
+      }
+    }
+
+    // Fallback to local response
     setTimeout(() => {
       const response = generateResponse(text, {
         mode: currentMode,
@@ -1160,11 +1233,33 @@ export default function App() {
     }, 1200);
   }, [state, speak, getActiveChatMode, showToast]);
 
-  const handleSend = useCallback((text: string, image?: string) => {
+  const handleSend = useCallback(async (text: string, image?: string) => {
     const currentMode = getActiveChatMode(state.activeModes);
     const userMsg: Message = { id: generateId(), role: 'user', content: text, timestamp: Date.now(), mode: currentMode, image };
     setState(prev => addMessage(prev, currentMode, userMsg));
 
+    // Use Gemini API if available
+    if (isGeminiAvailable(state.geminiApiKey)) {
+      try {
+        const response = await callGeminiAPI(
+          state.geminiApiKey,
+          text,
+          currentMode,
+          state.userName,
+          state.assistantName,
+          (state.conversations[currentMode] || []).map(m => ({ role: m.role, content: m.content })),
+          image
+        );
+        const assistantMsg: Message = { id: generateId(), role: 'assistant', content: response, timestamp: Date.now(), mode: currentMode };
+        setState(prev => addMessage(prev, currentMode, assistantMsg));
+        return;
+      } catch (e) {
+        console.error('Gemini API error:', e);
+        // Fallback to local response
+      }
+    }
+
+    // Fallback to local response
     setTimeout(() => {
       const response = generateResponse(text, {
         mode: currentMode,

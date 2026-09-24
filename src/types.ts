@@ -46,6 +46,7 @@ export interface AppState {
   bossVerified: boolean;
   contacts: { name: string; number: string }[];
   conversations: Record<ModeId, Message[]>;
+  geminiApiKey: string;
 }
 
 export interface Toast {

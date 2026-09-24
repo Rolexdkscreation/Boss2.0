@@ -37,6 +37,7 @@ const defaultState: AppState = {
     story: [],
     prompt: [],
   },
+  geminiApiKey: '',
 };
 
 export function loadState(): AppState {
